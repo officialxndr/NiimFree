@@ -1,0 +1,25 @@
+<!-- @dsCard group="Spacing" viewport="700x150" name="Spacing scale" subtitle="4-pt base — xs 4 to 3xl 48" -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="../styles.css">
+<style>
+  body { padding: 22px 24px; display: flex; gap: 18px; align-items: flex-end; }
+  .item { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+  .bar { background: var(--primary); border-radius: 4px; width: 100%; }
+  .box { width: 56px; display: flex; align-items: flex-end; justify-content: center; }
+  .name { font-size: 12px; font-weight: 600; color: var(--text); }
+  .px { font-family: var(--font-mono); font-size: 11px; color: var(--text-muted); }
+</style>
+</head>
+<body>
+  <div class="item"><div class="box"><div class="bar" style="height: var(--space-xs);"></div></div><div class="name">xs</div><div class="px">4</div></div>
+  <div class="item"><div class="box"><div class="bar" style="height: var(--space-sm);"></div></div><div class="name">sm</div><div class="px">8</div></div>
+  <div class="item"><div class="box"><div class="bar" style="height: var(--space-md);"></div></div><div class="name">md</div><div class="px">12</div></div>
+  <div class="item"><div class="box"><div class="bar" style="height: var(--space-lg);"></div></div><div class="name">lg</div><div class="px">16</div></div>
+  <div class="item"><div class="box"><div class="bar" style="height: var(--space-xl);"></div></div><div class="name">xl</div><div class="px">24</div></div>
+  <div class="item"><div class="box"><div class="bar" style="height: var(--space-2xl);"></div></div><div class="name">2xl</div><div class="px">32</div></div>
+  <div class="item"><div class="box"><div class="bar" style="height: var(--space-3xl);"></div></div><div class="name">3xl</div><div class="px">48</div></div>
+</body>
+</html>

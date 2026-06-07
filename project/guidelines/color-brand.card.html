@@ -1,0 +1,37 @@
+<!-- @dsCard group="Colors" viewport="700x150" name="Brand & accent" subtitle="Primary blue for actions, violet for templates / dynamic fields" -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="../styles.css">
+<style>
+  body { padding: 20px; }
+  .row { display: flex; gap: 12px; }
+  .sw { flex: 1; border-radius: var(--radius-md); overflow: hidden; border: 1px solid var(--border); }
+  .chip { height: 64px; display: flex; align-items: flex-end; padding: 8px; }
+  .meta { padding: 8px 10px; background: var(--surface); }
+  .name { font-size: 13px; font-weight: 600; color: var(--text); }
+  .hex { font-family: var(--font-mono); font-size: 12px; color: var(--text-muted); }
+</style>
+</head>
+<body>
+  <div class="row">
+    <div class="sw">
+      <div class="chip" style="background: var(--primary);"></div>
+      <div class="meta"><div class="name">Primary</div><div class="hex">--primary · #2B6BF3</div></div>
+    </div>
+    <div class="sw">
+      <div class="chip" style="background: var(--primary-press);"></div>
+      <div class="meta"><div class="name">Primary press</div><div class="hex">--primary-press</div></div>
+    </div>
+    <div class="sw">
+      <div class="chip" style="background: var(--accent);"></div>
+      <div class="meta"><div class="name">Accent</div><div class="hex">--accent · #7C4DFF</div></div>
+    </div>
+    <div class="sw">
+      <div class="chip" style="background: var(--accent-press);"></div>
+      <div class="meta"><div class="name">Accent press</div><div class="hex">--accent-press</div></div>
+    </div>
+  </div>
+</body>
+</html>

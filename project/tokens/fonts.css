@@ -1,0 +1,6 @@
+/* NiimFree — Webfonts
+   Inter (UI) + JetBrains Mono (barcodes/serials/dimensions), served from Google Fonts.
+   NOTE: substituted via CDN — drop real bundled .woff2 files here and rewrite these
+   @font-face rules if you need a fully offline / self-hosted build. */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');

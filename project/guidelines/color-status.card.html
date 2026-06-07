@@ -1,0 +1,34 @@
+<!-- @dsCard group="Colors" viewport="700x150" name="Status" subtitle="Success / warning / danger — printer state, errors, label detection" -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="../styles.css">
+<style>
+  body { padding: 20px; }
+  .row { display: flex; gap: 12px; }
+  .sw { flex: 1; border-radius: var(--radius-md); overflow: hidden; border: 1px solid var(--border); }
+  .chip { height: 44px; display: flex; align-items: center; gap: 8px; padding: 0 10px; color: #fff; font-size: 12px; font-weight: 600; }
+  .dot { width: 10px; height: 10px; border-radius: 999px; background: rgba(255,255,255,0.9); }
+  .meta { padding: 8px 10px; background: var(--surface); }
+  .name { font-size: 13px; font-weight: 600; color: var(--text); }
+  .hex { font-family: var(--font-mono); font-size: 12px; color: var(--text-muted); }
+</style>
+</head>
+<body>
+  <div class="row">
+    <div class="sw">
+      <div class="chip" style="background: var(--success);"><span class="dot"></span>Ready</div>
+      <div class="meta"><div class="name">Success</div><div class="hex">--success · #1FA971</div></div>
+    </div>
+    <div class="sw">
+      <div class="chip" style="background: var(--warning);"><span class="dot"></span>Lid open</div>
+      <div class="meta"><div class="name">Warning</div><div class="hex">--warning · #E8A33D</div></div>
+    </div>
+    <div class="sw">
+      <div class="chip" style="background: var(--danger);"><span class="dot"></span>Disconnected</div>
+      <div class="meta"><div class="name">Danger</div><div class="hex">--danger · #E0492F</div></div>
+    </div>
+  </div>
+</body>
+</html>

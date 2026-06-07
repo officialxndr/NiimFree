@@ -1,0 +1,63 @@
+<!-- @dsCard group="Components" viewport="700x340" name="Display" subtitle="Card · Badge · LabelThumbnail · FieldTag · DeviceRow" -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="../../styles.css">
+<style>
+  body { padding: 22px; background: var(--bg); }
+  .lbl { font-size: 11px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--text-faint); margin: 0 0 10px; }
+  .cols { display: grid; grid-template-columns: auto 1fr; gap: 28px; align-items: start; }
+  .thumbs { display: flex; gap: 14px; align-items: flex-end; }
+  .rowwrap { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 16px; }
+  .stack { display: flex; flex-direction: column; gap: 10px; }
+</style>
+</head>
+<body>
+  <div id="root"></div>
+  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/lucide@0.469.0/dist/umd/lucide.min.js"></script>
+  <script src="../../_ds_bundle.js"></script>
+  <script type="text/babel">
+    const { Card, Badge, LabelThumbnail, FieldTag, DeviceRow } = window.NiimFreeDesignSystem_8ff8e4;
+    function Demo() {
+      return (
+        <div>
+          <p className="lbl">Label thumbnails · badges · field tags</p>
+          <div className="thumbs" style={{marginBottom:'18px'}}>
+            <LabelThumbnail widthMm={40} heightMm={30} size={120}
+              lines={[{text:"Soup", strong:true, size:15}, {text:"Use by Jun 12", field:true, size:11}]} />
+            <LabelThumbnail widthMm={50} heightMm={30} size={140}
+              lines={[{text:"Server rack A", strong:true, size:13}, {text:"PORT 24", mono:true, size:11}]} />
+            <LabelThumbnail widthMm={12} heightMm={40} shape="cable" size={48}
+              lines={[{text:"USB-C", size:9}]} />
+            <div className="rowwrap" style={{flexDirection:'column', alignItems:'flex-start', gap:'8px'}}>
+              <Badge variant="accent">3 fields</Badge>
+              <Badge variant="mono">40×30 mm</Badge>
+              <Badge variant="success" icon="check">Saved</Badge>
+              <FieldTag>Item name</FieldTag>
+              <FieldTag icon="calendar">Expiry</FieldTag>
+            </div>
+          </div>
+          <div className="cols">
+            <Card style={{width:'240px'}}>
+              <div className="nf-heading" style={{marginBottom:'4px'}}>Defaults</div>
+              <div className="nf-caption">Density 3 · Quantity 1</div>
+            </Card>
+            <div>
+              <p className="lbl">Device rows (BLE scan)</p>
+              <div className="stack">
+                <DeviceRow name="D110-8F2A" meta="B1-2401-0837" rssi="-58 dBm" />
+                <DeviceRow name="B1-3C77" meta="A4-2310-1192" rssi="-71 dBm" />
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+    ReactDOM.createRoot(document.getElementById("root")).render(<Demo />);
+  </script>
+</body>
+</html>

@@ -1,0 +1,39 @@
+<!-- @dsCard group="Brand" viewport="700x200" name="Iconography — Lucide" subtitle="Consistent 2px outline set (web sibling of lucide-react-native); primary tint for active" -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="../styles.css">
+<style>
+  body { padding: 22px 24px; }
+  .grid { display: grid; grid-template-columns: repeat(8, 1fr); gap: 8px; }
+  .cell { display: flex; flex-direction: column; align-items: center; gap: 7px; padding: 12px 4px;
+          border-radius: var(--radius-md); background: var(--surface); border: 1px solid var(--border); }
+  .cell i { width: 24px; height: 24px; color: var(--text); }
+  .cell.active i { color: var(--primary); }
+  .nm { font-family: var(--font-mono); font-size: 10px; color: var(--text-muted); text-align: center; }
+</style>
+</head>
+<body>
+  <div class="grid">
+    <div class="cell active"><i data-lucide="tags"></i><span class="nm">tags</span></div>
+    <div class="cell"><i data-lucide="layout-grid"></i><span class="nm">grid</span></div>
+    <div class="cell"><i data-lucide="printer"></i><span class="nm">printer</span></div>
+    <div class="cell"><i data-lucide="settings"></i><span class="nm">settings</span></div>
+    <div class="cell"><i data-lucide="plus"></i><span class="nm">plus</span></div>
+    <div class="cell"><i data-lucide="bluetooth"></i><span class="nm">bluetooth</span></div>
+    <div class="cell"><i data-lucide="qr-code"></i><span class="nm">qr-code</span></div>
+    <div class="cell"><i data-lucide="calendar"></i><span class="nm">calendar</span></div>
+    <div class="cell"><i data-lucide="type"></i><span class="nm">type</span></div>
+    <div class="cell"><i data-lucide="shapes"></i><span class="nm">shapes</span></div>
+    <div class="cell"><i data-lucide="barcode"></i><span class="nm">barcode</span></div>
+    <div class="cell"><i data-lucide="image"></i><span class="nm">image</span></div>
+    <div class="cell"><i data-lucide="battery-medium"></i><span class="nm">battery</span></div>
+    <div class="cell"><i data-lucide="lock"></i><span class="nm">lock</span></div>
+    <div class="cell"><i data-lucide="check-circle-2"></i><span class="nm">check</span></div>
+    <div class="cell"><i data-lucide="more-horizontal"></i><span class="nm">overflow</span></div>
+  </div>
+  <script src="https://unpkg.com/lucide@0.469.0/dist/umd/lucide.min.js"></script>
+  <script>lucide.createIcons();</script>
+</body>
+</html>

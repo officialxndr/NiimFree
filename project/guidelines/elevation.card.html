@@ -1,0 +1,20 @@
+<!-- @dsCard group="Spacing" viewport="700x180" name="Elevation" subtitle="Soft, low-contrast shadows — card, pop, sheet" -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="../styles.css">
+<style>
+  body { padding: 26px 24px; display: flex; gap: 24px; align-items: center; }
+  .item { display: flex; flex-direction: column; align-items: center; gap: 12px; }
+  .box { width: 130px; height: 84px; background: var(--surface); border-radius: var(--radius-lg); }
+  .name { font-size: 12px; font-weight: 600; color: var(--text); }
+  .desc { font-family: var(--font-mono); font-size: 11px; color: var(--text-muted); }
+</style>
+</head>
+<body>
+  <div class="item"><div class="box" style="box-shadow: var(--shadow-card);"></div><div class="name">card</div><div class="desc">--shadow-card</div></div>
+  <div class="item"><div class="box" style="box-shadow: var(--shadow-pop);"></div><div class="name">pop</div><div class="desc">--shadow-pop</div></div>
+  <div class="item"><div class="box" style="box-shadow: var(--shadow-sheet);"></div><div class="name">sheet</div><div class="desc">--shadow-sheet</div></div>
+</body>
+</html>

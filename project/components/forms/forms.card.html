@@ -1,0 +1,70 @@
+<!-- @dsCard group="Components" viewport="700x340" name="Forms" subtitle="TextField · Stepper · SegmentedControl · Switch · Chip" -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="../../styles.css">
+<style>
+  body { padding: 22px; background: var(--bg); }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 22px 28px; align-items: start; }
+  .blk { display: flex; flex-direction: column; gap: 12px; }
+  .lbl { font-size: 11px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--text-faint); }
+  .rowwrap { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+</style>
+</head>
+<body>
+  <div id="root"></div>
+  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/lucide@0.469.0/dist/umd/lucide.min.js"></script>
+  <script src="../../_ds_bundle.js"></script>
+  <script type="text/babel">
+    const { TextField, Stepper, SegmentedControl, Switch, Chip } = window.NiimFreeDesignSystem_8ff8e4;
+    const { useState } = React;
+    function Demo() {
+      const [name, setName] = useState("Soup");
+      const [code, setCode] = useState("6975728310042");
+      const [density, setDensity] = useState(3);
+      const [offset, setOffset] = useState(5);
+      const [tab, setTab] = useState("My templates");
+      const [cloud, setCloud] = useState(false);
+      const [sound, setSound] = useState(true);
+      return (
+        <div className="grid">
+          <div className="blk">
+            <span className="lbl">Text field</span>
+            <TextField label="Item name" value={name} onChange={setName} placeholder="e.g. Soup" />
+            <TextField label="Barcode" mono icon="barcode" value={code} onChange={setCode} />
+          </div>
+          <div className="blk">
+            <span className="lbl">Stepper</span>
+            <div className="rowwrap">
+              <Stepper value={density} min={1} max={5} onChange={setDensity} />
+              <Stepper value={offset} min={0} max={30} onChange={setOffset} formatValue={(n)=>`+${n}d`} />
+            </div>
+            <span className="lbl" style={{marginTop:'6px'}}>Switch</span>
+            <div className="rowwrap">
+              <Switch checked={cloud} onChange={setCloud} label="Cloud lookup" /><span className="nf-caption">Cloud lookup</span>
+              <Switch checked={sound} onChange={setSound} label="Sound" /><span className="nf-caption">Sound</span>
+            </div>
+          </div>
+          <div className="blk">
+            <span className="lbl">Segmented control</span>
+            <SegmentedControl options={["My templates","Starter"]} value={tab} onChange={setTab} />
+          </div>
+          <div className="blk">
+            <span className="lbl">Chips</span>
+            <div className="rowwrap">
+              {[1,3,5,7,14].map(n => (
+                <Chip key={n} selected={offset===n} onClick={()=>setOffset(n)}>+{n} days</Chip>
+              ))}
+            </div>
+          </div>
+        </div>
+      );
+    }
+    ReactDOM.createRoot(document.getElementById("root")).render(<Demo />);
+  </script>
+</body>
+</html>

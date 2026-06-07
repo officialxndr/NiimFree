@@ -1,0 +1,15 @@
+/* NiimFree — Spacing scale (4-pt base) */
+
+:root {
+  --space-xs:   4px;
+  --space-sm:   8px;
+  --space-md:   12px;
+  --space-lg:   16px;
+  --space-xl:   24px;
+  --space-2xl:  32px;
+  --space-3xl:  48px;
+
+  /* Component minimums */
+  --tap-min:    44px;   /* minimum tap target */
+  --btn-height: 52px;   /* primary button height */
+}

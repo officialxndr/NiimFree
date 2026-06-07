@@ -1,0 +1,23 @@
+<!-- @dsCard group="Spacing" viewport="700x170" name="Radii" subtitle="sm 8 · md 12 · lg 16 (cards) · xl 24 (sheets) · pill" -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="../styles.css">
+<style>
+  body { padding: 22px 24px; display: flex; gap: 18px; align-items: flex-end; }
+  .item { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+  .box { width: 76px; height: 76px; background: var(--surface-alt); border: 1px solid var(--border); }
+  .name { font-size: 12px; font-weight: 600; color: var(--text); }
+  .px { font-family: var(--font-mono); font-size: 11px; color: var(--text-muted); }
+  .pill { width: 110px; height: 40px; border-radius: var(--radius-pill); background: var(--surface-alt); border: 1px solid var(--border); }
+</style>
+</head>
+<body>
+  <div class="item"><div class="box" style="border-radius: var(--radius-sm);"></div><div class="name">sm</div><div class="px">8</div></div>
+  <div class="item"><div class="box" style="border-radius: var(--radius-md);"></div><div class="name">md</div><div class="px">12</div></div>
+  <div class="item"><div class="box" style="border-radius: var(--radius-lg);"></div><div class="name">lg</div><div class="px">16</div></div>
+  <div class="item"><div class="box" style="border-radius: var(--radius-xl);"></div><div class="name">xl</div><div class="px">24</div></div>
+  <div class="item"><div class="pill"></div><div class="name">pill</div><div class="px">999</div></div>
+</body>
+</html>
