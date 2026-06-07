@@ -1,0 +1,73 @@
+{
+  "expo": {
+    "name": "NiimFree",
+    "slug": "niimfree",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "scheme": "niimfree",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "icon": "./assets/icon.png",
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.niimfree.app",
+      "infoPlist": {
+        "NSBluetoothAlwaysUsageDescription": "NiimFree connects to your Niimbot label printer over Bluetooth to detect labels and print. No data leaves your device.",
+        "NSBluetoothPeripheralUsageDescription": "NiimFree connects to your Niimbot label printer over Bluetooth to print labels.",
+        "NSPhotoLibraryUsageDescription": "NiimFree lets you add images from your photo library to a label design.",
+        "UIBackgroundModes": [
+          "bluetooth-central"
+        ]
+      }
+    },
+    "android": {
+      "package": "com.niimfree.app",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#2B6BF3"
+      },
+      "permissions": [
+        "android.permission.BLUETOOTH_SCAN",
+        "android.permission.BLUETOOTH_CONNECT",
+        "android.permission.ACCESS_FINE_LOCATION"
+      ]
+    },
+    "plugins": [
+      "expo-router",
+      "expo-font",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 220,
+          "resizeMode": "contain",
+          "backgroundColor": "#F7F8FA",
+          "dark": {
+            "backgroundColor": "#0E1116"
+          }
+        }
+      ],
+      [
+        "react-native-ble-plx",
+        {
+          "isBackgroundEnabled": false,
+          "modes": [
+            "central"
+          ],
+          "bluetoothAlwaysPermission": "NiimFree connects to your Niimbot label printer over Bluetooth to detect labels and print."
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "NiimFree lets you add images from your photo library to a label design."
+        }
+      ],
+      "expo-sqlite",
+      "expo-asset"
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}

@@ -1,5 +1,10 @@
 # CODING AGENTS: READ THIS FIRST
 
+> **Status (June 2026): the app has been built.** The real Expo + React Native (TypeScript)
+> iPhone app lives in [`mobile/`](mobile/) — see [`mobile/README.md`](mobile/README.md) for how
+> to build and run it on macOS. The folders below (`project/`, the spec) are the original
+> design handoff it was built from.
+
 This is a **handoff bundle** from Claude Design (claude.ai/design).
 
 A user mocked up designs in HTML/CSS/JS using an AI design tool, then exported this bundle so a coding agent can implement the designs for real.
