@@ -11,6 +11,9 @@
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.niimfree.app",
+      "config": {
+        "usesNonExemptEncryption": false
+      },
       "infoPlist": {
         "NSBluetoothAlwaysUsageDescription": "NiimFree connects to your Niimbot label printer over Bluetooth to detect labels and print. No data leaves your device.",
         "NSBluetoothPeripheralUsageDescription": "NiimFree connects to your Niimbot label printer over Bluetooth to print labels.",
