@@ -33,7 +33,10 @@ export function ElementContent({ el, scale, values }: { el: LabelElement; scale:
             width: '100%',
             color: INK,
             fontSize,
+            fontFamily: el.fontFamily,
             fontWeight: el.bold ? '800' : '600',
+            fontStyle: el.italic ? 'italic' : 'normal',
+            textDecorationLine: el.underline ? 'underline' : 'none',
             textAlign: el.align,
           }}
         >

@@ -106,8 +106,10 @@ export default function PreviewScreen() {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: t.colors.bg }}>
-      {/* off-screen capture source */}
+      {/* Capture source: rendered on-screen (so its children paint into the view-shot
+          snapshot) then hidden behind the opaque overlay below. */}
       <RasterLabel design={design} innerRef={rasterRef} />
+      <View pointerEvents="none" style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: t.colors.bg }} />
 
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: t.spacing.lg }}>
         <Txt variant="title">Preview</Txt>

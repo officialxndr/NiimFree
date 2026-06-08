@@ -50,7 +50,10 @@ export default function PrintScreen() {
 
   useFocusEffect(
     useCallback(() => {
+      usePrinter.getState().autoConnect(); // (re)start watching for the last printer if disconnected
       printer.refreshStatus();
+      const id = setInterval(() => printer.refreshStatus(), 3000); // live lid/paper while viewing
+      return () => clearInterval(id);
     }, []) // eslint-disable-line react-hooks/exhaustive-deps
   );
 

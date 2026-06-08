@@ -50,6 +50,7 @@ export default function RootLayout() {
   useEffect(() => {
     getDb(); // open + migrate + seed
     loadSettings();
+    usePrinter.getState().autoConnect(); // reconnect to the last printer, best-effort
   }, [loadSettings]);
 
   return (

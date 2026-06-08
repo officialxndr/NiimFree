@@ -1,11 +1,13 @@
 // NiimFree UI primitives — React Native translations of the design-system components.
 // All styling is token-driven via useTheme(); no hard-coded colors.
 
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Animated,
+  Keyboard,
   Modal,
+  Platform,
   Pressable,
   ScrollView,
   StyleProp,
@@ -384,12 +386,29 @@ export function EmptyState({
 
 // ---- Inputs -------------------------------------------------------------
 
-export function Chip({ children, selected, onPress }: { children: React.ReactNode; selected?: boolean; onPress?: () => void }) {
+export function Chip({
+  children,
+  selected,
+  onPress,
+  onLongPress,
+  icon,
+}: {
+  children: React.ReactNode;
+  selected?: boolean;
+  onPress?: () => void;
+  onLongPress?: () => void;
+  icon?: string;
+}) {
   const t = useTheme();
+  const fg = selected ? t.colors.primaryText : t.colors.text;
   return (
     <Pressable
       onPress={onPress}
+      onLongPress={onLongPress}
       style={{
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 5,
         paddingHorizontal: 14,
         paddingVertical: 8,
         borderRadius: t.radius.pill,
@@ -398,7 +417,8 @@ export function Chip({ children, selected, onPress }: { children: React.ReactNod
         borderColor: selected ? t.colors.primary : t.colors.border,
       }}
     >
-      <Txt variant="caption" color={selected ? t.colors.primaryText : t.colors.text} style={{ fontWeight: '600' }}>
+      {icon && <Icon name={icon} size={14} color={fg} />}
+      <Txt variant="caption" color={fg} style={{ fontWeight: '600' }}>
         {children}
       </Txt>
     </Pressable>
@@ -645,9 +665,21 @@ export function BottomSheet({
   const t = useTheme();
   const insets = useSafeAreaInsets();
   const slide = useRef(new Animated.Value(0)).current;
+  const [kb, setKb] = useState(0);
   useEffect(() => {
     Animated.timing(slide, { toValue: visible ? 1 : 0, duration: 240, useNativeDriver: true }).start();
   }, [visible, slide]);
+  // Lift the sheet above the on-screen keyboard so inputs aren't covered.
+  useEffect(() => {
+    const showEvt = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvt = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+    const s = Keyboard.addListener(showEvt, (e) => setKb(e.endCoordinates?.height ?? 0));
+    const h = Keyboard.addListener(hideEvt, () => setKb(0));
+    return () => {
+      s.remove();
+      h.remove();
+    };
+  }, []);
   const translateY = slide.interpolate({ inputRange: [0, 1], outputRange: [600, 0] });
   return (
     <Modal transparent visible={visible} animationType="fade" statusBarTranslucent onRequestClose={onClose}>
@@ -657,14 +689,14 @@ export function BottomSheet({
           position: 'absolute',
           left: 0,
           right: 0,
-          bottom: 0,
+          bottom: kb, // rests on top of the keyboard when it's open, at the screen bottom otherwise
           maxHeight: '88%',
           backgroundColor: t.colors.surface,
           borderTopLeftRadius: t.radius.xl,
           borderTopRightRadius: t.radius.xl,
           paddingHorizontal: t.spacing.lg,
           paddingTop: t.spacing.sm,
-          paddingBottom: insets.bottom + t.spacing.lg,
+          paddingBottom: (kb > 0 ? t.spacing.md : insets.bottom + t.spacing.lg),
           transform: [{ translateY }],
           ...t.shadow('sheet'),
         }}

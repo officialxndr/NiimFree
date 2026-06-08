@@ -32,6 +32,8 @@ export interface FieldBinding {
   order: number;
   defaultValue?: string;
   placeholder?: string;
+  prefix?: string; // always shown before the filled value, e.g. "$"
+  suffix?: string; // always shown after the filled value, e.g. " lbs"
 }
 
 // Feature C — dynamic date computed at fill/print time.
@@ -58,6 +60,9 @@ export interface TextElement extends BaseElement {
   text: string;
   fontSize: number; // points relative to label, ~ mm * 2.5 visual
   bold?: boolean;
+  italic?: boolean;
+  underline?: boolean;
+  fontFamily?: string; // platform font name; undefined = system sans
   align: 'left' | 'center' | 'right';
   autosize?: boolean;
 }
@@ -66,6 +71,9 @@ export interface DateElement extends BaseElement {
   type: 'date';
   fontSize: number;
   bold?: boolean;
+  italic?: boolean;
+  underline?: boolean;
+  fontFamily?: string;
   align: 'left' | 'center' | 'right';
   date: DateConfig;
 }
@@ -120,8 +128,19 @@ export interface LabelDesign {
   elements: LabelElement[];
   isTemplate: boolean;
   sourceTemplateId?: string;
+  folderId?: string; // groups templates into folders/categories
   createdAt: number;
   updatedAt: number;
+}
+
+// A folder/category for organising templates. `scope` keeps the seeded starter categories
+// separate from the user's own folders.
+export interface Folder {
+  id: string;
+  name: string;
+  scope: 'starter' | 'mine';
+  sort: number;
+  createdAt: number;
 }
 
 export interface DatePreset {

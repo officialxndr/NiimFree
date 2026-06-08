@@ -5,7 +5,7 @@
 // Floyd–Steinberg dither) each pixel to ink/no-ink. This guarantees the printed output
 // matches what the user sees, without re-implementing text/layout in Skia directly.
 
-import { AlphaType, ColorType, Skia } from '@shopify/react-native-skia';
+import { AlphaType, ColorType, FilterMode, MipmapMode, Skia } from '@shopify/react-native-skia';
 import React from 'react';
 import { View } from 'react-native';
 import { captureRef } from 'react-native-view-shot';
@@ -27,8 +27,13 @@ export function RasterLabel({
   values?: FillValues;
   innerRef: React.RefObject<View>;
 }) {
+  // Must render GENUINELY on-screen: on the New Architecture, react-native-view-shot only
+  // snapshots a view that received a real on-screen render pass — parked off-screen (or at
+  // near-zero opacity) the paper background captures but the <Text>/<Image> children don't.
+  // So we render it at full opacity at the top-left and let the caller cover it with an
+  // opaque overlay. pointerEvents="none" keeps it from intercepting touches.
   return (
-    <View style={{ position: 'absolute', left: -100000, top: 0 }} pointerEvents="none">
+    <View style={{ position: 'absolute', top: 0, left: 0 }} pointerEvents="none">
       <View ref={innerRef} collapsable={false}>
         <LabelSurface design={design} pxPerMm={PX_PER_MM} values={values} />
       </View>
@@ -83,17 +88,40 @@ export async function captureBitmap(
   const widthPx = Math.round(design.widthMm * PX_PER_MM);
   const heightPx = Math.round(design.heightMm * PX_PER_MM);
 
+  // NOTE: do NOT pass width/height here. Those force view-shot down iOS's
+  // CALayer.render(in:) path, which on the New Architecture rasterizes only the backing
+  // layer (the white paper) and drops <Text>/<Image> children — the capture comes back
+  // blank. Omitting them uses drawViewHierarchyInRect, which renders the real view tree.
+  // The capture comes back at the device pixel ratio and is downscaled below.
   const base64 = await captureRef(ref, {
     result: 'base64',
     format: 'png',
     quality: 1,
-    width: widthPx,
-    height: heightPx,
   });
 
   const data = Skia.Data.fromBase64(base64);
-  const image = Skia.Image.MakeImageFromEncoded(data);
-  if (!image) throw new Error('Could not decode captured label image.');
+  const captured = Skia.Image.MakeImageFromEncoded(data);
+  if (!captured) throw new Error('Could not decode captured label image.');
+  const capW = captured.width();
+  const capH = captured.height();
+
+  // view-shot captures at the device pixel ratio (e.g. 3×), so the decoded image is larger
+  // than our target 8 px/mm. Downscale to exactly widthPx×heightPx — the extra source
+  // resolution acts as supersampling and sharpens the 1-bit result.
+  let image = captured;
+  if (capW !== widthPx || capH !== heightPx) {
+    const surface = Skia.Surface.MakeOffscreen(widthPx, heightPx);
+    if (surface) {
+      surface.getCanvas().drawImageRectOptions(
+        captured,
+        Skia.XYWHRect(0, 0, capW, capH),
+        Skia.XYWHRect(0, 0, widthPx, heightPx),
+        FilterMode.Linear,
+        MipmapMode.None
+      );
+      image = surface.makeImageSnapshot();
+    }
+  }
 
   const rgba = image.readPixels(0, 0, {
     width: widthPx,

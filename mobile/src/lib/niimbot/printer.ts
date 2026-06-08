@@ -89,7 +89,9 @@ export class NiimbotPrinter {
   }
 
   private async readInfoString(key: InfoKey): Promise<string | null> {
-    const res = await this.requestNext(build.getInfo(key), 1200);
+    // Info replies come back as type (0x40 + key); match on that so a slow reply from one
+    // info request can't satisfy the next one (or the heartbeat read).
+    const res = await this.requestNext(build.getInfo(key), 1200, Cmd.PrinterInfo + key);
     if (!res || res.data.length === 0) return null;
     // Device serial/type usually come back as ASCII; battery/etc. as a number.
     const printable = Array.from(res.data).every((b) => b >= 0x20 && b < 0x7f);
@@ -97,7 +99,7 @@ export class NiimbotPrinter {
   }
 
   async readBattery(): Promise<number | undefined> {
-    const res = await this.requestNext(build.getInfo(InfoKey.Battery), 1200);
+    const res = await this.requestNext(build.getInfo(InfoKey.Battery), 1200, Cmd.PrinterInfo + InfoKey.Battery);
     if (!res || res.data.length === 0) return undefined;
     const raw = res.data[res.data.length - 1];
     // Some firmwares report 0–4 bars, others 0–100. Normalise to a percentage.
@@ -126,21 +128,21 @@ export class NiimbotPrinter {
 
   /** Best-effort heartbeat read of lid / paper / rfid / battery state. */
   async readStatus(): Promise<PrinterStatus> {
-    const res = await this.requestNext(build.heartbeat(), 1200);
+    // Match the heartbeat reply by type (0xdc + 1 = 0xdd) so we don't mis-read a stray
+    // serial/info reply as status. Tail layout (verified on B1, 13-byte reply):
+    //   d[len-4] door  (1 = open),  d[len-3] battery level,
+    //   d[len-2] paper (0 = present / 1 = missing),  d[len-1] rfid (1 = read ok).
+    const res = await this.requestNext(build.heartbeat(), 1200, Cmd.Heartbeat + 1);
     if (!res) return {};
     const d = res.data;
     const len = d.length;
-    // Field offsets are firmware-dependent; the 13-byte "advanced" layout is the common one.
-    if (len >= 13) {
+    if (len >= 4) {
       return {
-        doorOpen: d[len - 4] === 0,
+        doorOpen: len >= 13 ? d[len - 4] === 1 : undefined,
         batteryPct: normaliseBattery(d[len - 3]),
-        paperPresent: d[len - 2] === 1,
+        paperPresent: d[len - 2] === 0,
         rfidOk: d[len - 1] === 1,
       };
-    }
-    if (len >= 4) {
-      return { batteryPct: normaliseBattery(d[len - 3]), paperPresent: d[len - 2] === 1, rfidOk: d[len - 1] === 1 };
     }
     return {};
   }
@@ -162,9 +164,21 @@ export class NiimbotPrinter {
     await sleep(30);
 
     const rows = encodeRows(bitmap);
-    for (let i = 0; i < rows.length; i++) {
-      await this.send(rows[i]);
-      if (i % 8 === 0) onProgress?.({ phase: 'sending', percent: Math.round((i / rows.length) * 85) });
+    // Stream the row packets in MTU-packed batches instead of one acknowledged BLE write per
+    // scan-line. One write-per-row means ~N connection intervals of latency before the
+    // printer even starts (the slow-to-start delay); packing many rows per write removes it.
+    const BATCH = 48;
+    for (let i = 0; i < rows.length; i += BATCH) {
+      const parts = rows.slice(i, i + BATCH).map((p) => p.toBytes());
+      const total = parts.reduce((n, b) => n + b.length, 0);
+      const buf = new Uint8Array(total);
+      let off = 0;
+      for (const b of parts) {
+        buf.set(b, off);
+        off += b.length;
+      }
+      await this.transport.send(buf);
+      onProgress?.({ phase: 'sending', percent: Math.round((Math.min(i + BATCH, rows.length) / rows.length) * 85) });
     }
     onProgress?.({ phase: 'sending', percent: 85 });
 
@@ -180,7 +194,7 @@ export class NiimbotPrinter {
   private async waitForComplete(quantity: number, rowCount: number, onProgress?: (p: PrintProgress) => void): Promise<void> {
     const deadline = Date.now() + rowCount * quantity * 14 + 5000;
     while (Date.now() < deadline) {
-      const res = await this.requestNext(build.printStatus(), 600);
+      const res = await this.requestNext(build.printStatus(), 600, Cmd.PrintStatusReply);
       if (res && res.data.length >= 2) {
         const printedPages = (res.data[0] << 8) | res.data[1];
         if (printedPages >= quantity) return;

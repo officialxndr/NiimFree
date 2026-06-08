@@ -38,8 +38,9 @@ export function defaultValues(design: LabelDesign): FillValues {
 export function resolveText(el: LabelElement, values?: FillValues): string {
   switch (el.type) {
     case 'text': {
-      if (el.field && values && values[el.field.name] != null) return String(values[el.field.name]);
-      return el.text;
+      const raw = el.field && values && values[el.field.name] != null ? String(values[el.field.name]) : el.text;
+      // Field affixes (e.g. "$" / " lbs") wrap the value but live outside it.
+      return `${el.field?.prefix ?? ''}${raw}${el.field?.suffix ?? ''}`;
     }
     case 'date': {
       const override = el.field && values && values[el.field.name] != null ? Number(values[el.field.name]) : undefined;

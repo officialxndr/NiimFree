@@ -16,6 +16,18 @@ import { base64ToBytes, bytesToBase64 } from './base64';
 const NIIMBOT_SERVICE = 'e7810a71-73ae-499d-8c15-faa9aef0c3f2';
 const NIIMBOT_CHAR = 'bef8d6c9-9c21-4c9e-b632-bd58c1009f9f';
 
+/**
+ * Heuristic: is this advertised name a Niimbot printer? Niimbot devices advertise as
+ * "Niimbot-…" or a model code like B1-XXXX / B18 / B21 / B3S / D11 / D101 / D110 / H1.
+ * Consumer devices (AirPods, JBL, Galaxy Buds, …) don't match, so this keeps the list clean.
+ */
+export function isNiimbotName(name: string): boolean {
+  const n = name.trim().toLowerCase();
+  if (!n) return false;
+  if (n.includes('niimbot')) return true;
+  return /^[bdh]\d/.test(n); // B1, B18, B21, B3S, D11, D101, D110, H1, …
+}
+
 export interface ScanResult {
   id: string;
   name: string;
@@ -66,6 +78,21 @@ export class BleTransport {
   /** Scan for nearby devices. Calls `onDevice` for each discovery; returns a stop fn. */
   startScan(onDevice: (d: ScanResult) => void, onError?: (e: Error) => void): () => void {
     const seen = new Set<string>();
+    const report = (id: string, name: string, rssi: number | null) => {
+      if (seen.has(id)) return;
+      seen.add(id);
+      onDevice({ id, name: name || 'Niimbot printer', rssi });
+    };
+
+    // A printer with a still-open BLE link (e.g. left connected by a previous session, or
+    // after a force-quit) stops advertising, so it never appears in a normal scan. Surface
+    // it from the OS list of connected peripherals so it can be re-selected — connect()
+    // clears the stale link first. This is the usual "had to power-cycle the printer" case.
+    this.manager
+      .connectedDevices([NIIMBOT_SERVICE])
+      .then((devices) => devices.forEach((d) => report(d.id, d.name ?? d.localName ?? '', d.rssi)))
+      .catch(() => {});
+
     this.manager.startDeviceScan(null, { allowDuplicates: false }, (error, device) => {
       if (error) {
         onError?.(error);
@@ -74,9 +101,8 @@ export class BleTransport {
       if (!device || seen.has(device.id)) return;
       // Niimbot printers advertise names like "B1-XXXX", "B21-XXXX", "D110-XXXX".
       const name = device.name ?? device.localName ?? '';
-      if (!name) return;
-      seen.add(device.id);
-      onDevice({ id: device.id, name, rssi: device.rssi });
+      if (!name || !isNiimbotName(name)) return; // only surface Niimbot printers
+      report(device.id, name, device.rssi);
     });
     return () => this.manager.stopDeviceScan();
   }
@@ -87,7 +113,17 @@ export class BleTransport {
 
   async connect(deviceId: string): Promise<Device> {
     this.manager.stopDeviceScan();
-    let device = await this.manager.connectToDevice(deviceId, { requestMTU: 247 });
+    // Clear any stale/lingering link to this printer first. Reconnecting on top of an
+    // existing connection fails, and the leftover link is exactly what stops the printer
+    // from advertising (the "have to power-cycle it" symptom).
+    try {
+      if (await this.manager.isDeviceConnected(deviceId)) {
+        await this.manager.cancelDeviceConnection(deviceId);
+      }
+    } catch {
+      /* no stale connection — fine */
+    }
+    let device = await this.manager.connectToDevice(deviceId, { requestMTU: 247, timeout: 12000 });
     device = await device.discoverAllServicesAndCharacteristics();
     this.device = device;
     this.chunkSize = Math.max(20, (device.mtu ?? 23) - 3);
@@ -145,7 +181,10 @@ export class BleTransport {
   /** Write a fully framed packet, chunked to the negotiated MTU. */
   async send(bytes: Uint8Array): Promise<void> {
     if (!this.device || !this.writeChar) throw new Error('Not connected');
-    const useResponse = !this.writeChar.isWritableWithoutResponse;
+    // Prefer acknowledged writes when the characteristic supports them: write-without-response
+    // gives no flow control, so a long stream of image-row packets can be silently dropped
+    // (prints blank/partial). Fall back to without-response only when that's all that's offered.
+    const useResponse = this.writeChar.isWritableWithResponse;
     for (let i = 0; i < bytes.length; i += this.chunkSize) {
       const slice = bytes.slice(i, i + this.chunkSize);
       const b64 = bytesToBase64(slice);

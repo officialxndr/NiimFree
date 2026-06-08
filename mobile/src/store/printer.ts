@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { BleTransport, ScanResult } from '../lib/ble/transport';
-import { getRememberedByBarcode, upsertRemembered } from '../lib/db';
+import { getLastPrinter, getRememberedByBarcode, setLastPrinter, upsertRemembered } from '../lib/db';
 import { Bitmap } from '../lib/niimbot/encoder';
 import { NiimbotPrinter, PrinterIdentity, PrinterStatus, PrintProgress } from '../lib/niimbot/printer';
 import { LabelShape, PrinterCaps } from '../types/models';
@@ -28,6 +28,7 @@ interface PrinterState {
   startScan: (onDevice: (d: ScanResult) => void, onError?: (e: Error) => void) => Promise<() => void>;
   stopScan: () => void;
   connect: (deviceId: string, name: string) => Promise<void>;
+  autoConnect: () => Promise<void>;
   disconnect: () => Promise<void>;
   refreshStatus: () => Promise<void>;
   detectLabel: () => Promise<void>;
@@ -41,6 +42,19 @@ interface PrinterState {
 const transport = new BleTransport();
 const printer = new NiimbotPrinter(transport);
 
+// Background auto-reconnect scan: when disconnected with a known last printer, we scan and
+// connect as soon as that printer starts advertising (i.e. when the user powers it on).
+let autoScanStop: (() => void) | null = null;
+let autoScanTimer: ReturnType<typeof setTimeout> | null = null;
+function stopAutoScan() {
+  autoScanStop?.();
+  autoScanStop = null;
+  if (autoScanTimer) {
+    clearTimeout(autoScanTimer);
+    autoScanTimer = null;
+  }
+}
+
 function capsForModel(model: string): PrinterCaps {
   // B1 / B21 / B3S: sound + auto-shutdown, no speed/cut controls.
   return { speed: false, cut: false, sound: true, autoShutdown: true };
@@ -49,6 +63,8 @@ function capsForModel(model: string): PrinterCaps {
 export const usePrinter = create<PrinterState>((set, get) => {
   transport.onDisconnect(() => {
     set({ connection: 'disconnected', identity: null, status: {}, detected: null, pendingBarcode: null });
+    // Unexpected drop (printer powered off / out of range): start watching to reconnect.
+    setTimeout(() => get().autoConnect(), 2000);
   });
 
   return {
@@ -62,6 +78,7 @@ export const usePrinter = create<PrinterState>((set, get) => {
     error: null,
 
     startScan: async (onDevice, onError) => {
+      stopAutoScan(); // a manual scan takes over the radio
       const on = await transport.waitForPoweredOn();
       if (!on) {
         onError?.(new Error('Bluetooth is off. Turn it on to scan for printers.'));
@@ -72,6 +89,7 @@ export const usePrinter = create<PrinterState>((set, get) => {
     stopScan: () => transport.stopScan(),
 
     connect: async (deviceId, name) => {
+      stopAutoScan();
       set({ connection: 'connecting', error: null });
       try {
         const on = await transport.waitForPoweredOn();
@@ -79,6 +97,7 @@ export const usePrinter = create<PrinterState>((set, get) => {
         await transport.connect(deviceId);
         const identity = await printer.handshake(name);
         set({ connection: 'connected', identity, caps: capsForModel(identity.model) });
+        setLastPrinter(deviceId, name).catch(() => {}); // remember for auto-connect
         await get().refreshStatus();
         await get().detectLabel();
       } catch (e: any) {
@@ -87,7 +106,28 @@ export const usePrinter = create<PrinterState>((set, get) => {
       }
     },
 
+    // Watch for the last-used printer and connect as soon as it advertises (i.e. when the
+    // user turns it on). Safe to call repeatedly — it no-ops if already connected/scanning.
+    autoConnect: async () => {
+      if (get().connection !== 'disconnected' || autoScanStop) return;
+      const last = await getLastPrinter();
+      if (!last) return;
+      const on = await transport.waitForPoweredOn();
+      if (!on || get().connection !== 'disconnected' || autoScanStop) return;
+      const stop = transport.startScan(
+        (d) => {
+          if (d.id !== last.id) return; // wait for *our* printer
+          stopAutoScan();
+          get().connect(d.id, d.name || last.name).catch(() => set({ error: null }));
+        },
+        () => stopAutoScan()
+      );
+      autoScanStop = stop;
+      autoScanTimer = setTimeout(stopAutoScan, 120000); // give up after 2 min to save battery
+    },
+
     disconnect: async () => {
+      stopAutoScan(); // user asked to disconnect — don't immediately reconnect
       await transport.disconnect();
       set({ connection: 'disconnected', identity: null, status: {}, detected: null, pendingBarcode: null });
     },
@@ -96,10 +136,13 @@ export const usePrinter = create<PrinterState>((set, get) => {
       if (get().connection !== 'connected') return;
       try {
         const status = await printer.readStatus();
-        const batteryPct = status.batteryPct ?? (await printer.readBattery());
-        set({ status: { ...status, batteryPct } });
+        // Merge, don't replace: a heartbeat that times out returns {}; keeping the
+        // last-known values stops the battery/lid/paper/RFID readout from flickering.
+        if (status && Object.keys(status).length > 0) {
+          set({ status: { ...get().status, ...status } });
+        }
       } catch {
-        /* status is best-effort */
+        /* status is best-effort — keep last-known */
       }
     },
 

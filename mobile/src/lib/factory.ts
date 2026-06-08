@@ -4,6 +4,27 @@ import { FillValues, resolveText } from './labelValues';
 import { nowMs, uid } from './util';
 import { LabelDesign, LabelElement, LabelShape } from '../types/models';
 
+/** Rescale a design to a new label size so the same template works on a different roll.
+ *  Positions/sizes scale per axis; font sizes and QR codes scale by the smaller axis so
+ *  text and codes keep fitting. Element ids and field bindings are preserved. */
+export function resizeDesign(design: LabelDesign, widthMm: number, heightMm: number, shape?: LabelShape): LabelDesign {
+  const sx = widthMm / design.widthMm;
+  const sy = heightMm / design.heightMm;
+  const fs = Math.min(sx, sy);
+  const elements: LabelElement[] = design.elements.map((el) => {
+    let next = { ...el, xMm: el.xMm * sx, yMm: el.yMm * sy, wMm: el.wMm * sx, hMm: el.hMm * sy } as LabelElement;
+    if (next.type === 'text' || next.type === 'date') {
+      next = { ...next, fontSize: Math.max(6, Math.round(next.fontSize * fs)) };
+    }
+    if (next.type === 'qr') {
+      const s = Math.min(next.wMm, next.hMm); // keep QR square
+      next = { ...next, wMm: s, hMm: s };
+    }
+    return next;
+  });
+  return { ...design, widthMm, heightMm, shape: shape ?? design.shape, elements, updatedAt: nowMs() };
+}
+
 export interface NewDesignOpts {
   widthMm: number;
   heightMm: number;

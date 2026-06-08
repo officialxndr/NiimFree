@@ -3,10 +3,11 @@
 // as a JSON blob; queryable fields live in their own columns.
 
 import * as SQLite from 'expo-sqlite';
-import { DEFAULT_DATE_PRESETS, STARTER_TEMPLATES } from '../data/presets';
+import { DEFAULT_DATE_PRESETS, STARTER_FOLDERS, STARTER_TEMPLATES } from '../data/presets';
 import {
   AppSettings,
   DatePreset,
+  Folder,
   LabelDesign,
   LabelElement,
   LabelShape,
@@ -36,9 +37,17 @@ async function open(): Promise<SQLite.SQLiteDatabase> {
       height_mm REAL NOT NULL,
       shape TEXT NOT NULL,
       source_template_id TEXT,
+      folder_id TEXT,
       created_at INTEGER NOT NULL,
       updated_at INTEGER NOT NULL,
       data TEXT NOT NULL
+    );
+    CREATE TABLE IF NOT EXISTS folders (
+      id TEXT PRIMARY KEY NOT NULL,
+      name TEXT NOT NULL,
+      scope TEXT NOT NULL,
+      sort INTEGER NOT NULL DEFAULT 0,
+      created_at INTEGER NOT NULL
     );
     CREATE TABLE IF NOT EXISTS remembered_labels (
       id TEXT PRIMARY KEY NOT NULL,
@@ -62,8 +71,46 @@ async function open(): Promise<SQLite.SQLiteDatabase> {
       value TEXT NOT NULL
     );
   `);
+  await migrate(db);
   await seed(db);
   return db;
+}
+
+// Bump to re-sync the bundled starter folders + templates into existing installs (e.g. when
+// starters are added/removed or recategorised). User-created templates are never touched.
+const CONTENT_VERSION = 3;
+
+// Schema migrations + bundled-content sync for databases created before a feature existed.
+async function migrate(db: SQLite.SQLiteDatabase): Promise<void> {
+  // labels.folder_id column (added for the folders feature).
+  const cols = await db.getAllAsync<{ name: string }>('PRAGMA table_info(labels)');
+  if (!cols.some((c) => c.name === 'folder_id')) {
+    await db.execAsync('ALTER TABLE labels ADD COLUMN folder_id TEXT');
+  }
+
+  const row = await db.getFirstAsync<{ value: string }>('SELECT value FROM settings WHERE key = ?', 'content_v');
+  if (Number(row?.value ?? '0') < CONTENT_VERSION) {
+    console.log('[NiimFree] content sync from', row?.value ?? 'none', '→', CONTENT_VERSION, '— starters:', STARTER_TEMPLATES.map((s) => s.id).join(','));
+    for (const f of STARTER_FOLDERS) {
+      await db.runAsync(
+        'INSERT OR REPLACE INTO folders (id, name, scope, sort, created_at) VALUES (?, ?, ?, ?, ?)',
+        f.id, f.name, f.scope, f.sort, f.createdAt || nowMs()
+      );
+    }
+    // Drop bundled starters no longer shipped (identified by the 'tpl-' id prefix).
+    const ids = STARTER_TEMPLATES.map((tpl) => tpl.id);
+    const placeholders = ids.map(() => '?').join(',');
+    await db.runAsync(`DELETE FROM labels WHERE id LIKE 'tpl-%' AND id NOT IN (${placeholders})`, ...ids);
+    for (const tpl of STARTER_TEMPLATES) {
+      await db.runAsync(
+        `INSERT OR REPLACE INTO labels
+           (id, name, is_template, width_mm, height_mm, shape, source_template_id, folder_id, created_at, updated_at, data)
+         VALUES (?, ?, 1, ?, ?, ?, NULL, ?, ?, ?, ?)`,
+        tpl.id, tpl.name, tpl.widthMm, tpl.heightMm, tpl.shape, tpl.folderId ?? null, tpl.createdAt, tpl.updatedAt, JSON.stringify(tpl.elements)
+      );
+    }
+    await db.runAsync('INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)', 'content_v', String(CONTENT_VERSION));
+  }
 }
 
 async function seed(db: SQLite.SQLiteDatabase): Promise<void> {
@@ -73,21 +120,7 @@ async function seed(db: SQLite.SQLiteDatabase): Promise<void> {
   );
   if (seeded) return;
 
-  for (const tpl of STARTER_TEMPLATES) {
-    await db.runAsync(
-      `INSERT OR REPLACE INTO labels
-         (id, name, is_template, width_mm, height_mm, shape, source_template_id, created_at, updated_at, data)
-       VALUES (?, ?, 1, ?, ?, ?, NULL, ?, ?, ?)`,
-      tpl.id,
-      tpl.name,
-      tpl.widthMm,
-      tpl.heightMm,
-      tpl.shape,
-      tpl.createdAt,
-      tpl.updatedAt,
-      JSON.stringify(tpl.elements)
-    );
-  }
+  // Starter folders + templates are handled by the versioned content sync in migrate().
   for (const p of DEFAULT_DATE_PRESETS) {
     await db.runAsync(
       'INSERT OR REPLACE INTO date_presets (id, name, offset_days, format, prefix) VALUES (?, ?, ?, ?, ?)',
@@ -117,6 +150,7 @@ interface LabelRow {
   height_mm: number;
   shape: string;
   source_template_id: string | null;
+  folder_id: string | null;
   created_at: number;
   updated_at: number;
   data: string;
@@ -131,6 +165,7 @@ function rowToDesign(r: LabelRow): LabelDesign {
     heightMm: r.height_mm,
     shape: r.shape as LabelShape,
     sourceTemplateId: r.source_template_id ?? undefined,
+    folderId: r.folder_id ?? undefined,
     createdAt: r.created_at,
     updatedAt: r.updated_at,
     elements: JSON.parse(r.data) as LabelElement[],
@@ -156,8 +191,8 @@ export async function saveLabel(design: LabelDesign): Promise<void> {
   const db = await getDb();
   await db.runAsync(
     `INSERT OR REPLACE INTO labels
-       (id, name, is_template, width_mm, height_mm, shape, source_template_id, created_at, updated_at, data)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       (id, name, is_template, width_mm, height_mm, shape, source_template_id, folder_id, created_at, updated_at, data)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     design.id,
     design.name,
     design.isTemplate ? 1 : 0,
@@ -165,10 +200,58 @@ export async function saveLabel(design: LabelDesign): Promise<void> {
     design.heightMm,
     design.shape,
     design.sourceTemplateId ?? null,
+    design.folderId ?? null,
     design.createdAt,
     design.updatedAt,
     JSON.stringify(design.elements)
   );
+}
+
+// ---- Folders ------------------------------------------------------------
+
+interface FolderRow {
+  id: string;
+  name: string;
+  scope: string;
+  sort: number;
+  created_at: number;
+}
+
+export async function listFolders(scope: Folder['scope']): Promise<Folder[]> {
+  const db = await getDb();
+  const rows = await db.getAllAsync<FolderRow>(
+    'SELECT * FROM folders WHERE scope = ? ORDER BY sort ASC, name ASC',
+    scope
+  );
+  return rows.map((r) => ({ id: r.id, name: r.name, scope: r.scope as Folder['scope'], sort: r.sort, createdAt: r.created_at }));
+}
+
+export async function createFolder(name: string, scope: Folder['scope']): Promise<Folder> {
+  const db = await getDb();
+  const row = await db.getFirstAsync<{ max: number | null }>('SELECT MAX(sort) AS max FROM folders WHERE scope = ?', scope);
+  const folder: Folder = { id: uid(), name, scope, sort: (row?.max ?? -1) + 1, createdAt: nowMs() };
+  await db.runAsync(
+    'INSERT INTO folders (id, name, scope, sort, created_at) VALUES (?, ?, ?, ?, ?)',
+    folder.id, folder.name, folder.scope, folder.sort, folder.createdAt
+  );
+  return folder;
+}
+
+export async function renameFolder(id: string, name: string): Promise<void> {
+  const db = await getDb();
+  await db.runAsync('UPDATE folders SET name = ? WHERE id = ?', name, id);
+}
+
+/** Delete a folder; its templates are kept but moved out of the folder (folder_id → null). */
+export async function deleteFolder(id: string): Promise<void> {
+  const db = await getDb();
+  await db.runAsync('UPDATE labels SET folder_id = NULL WHERE folder_id = ?', id);
+  await db.runAsync('DELETE FROM folders WHERE id = ?', id);
+}
+
+export async function moveLabelToFolder(labelId: string, folderId: string | null): Promise<void> {
+  const db = await getDb();
+  await db.runAsync('UPDATE labels SET folder_id = ?, updated_at = ? WHERE id = ?', folderId, nowMs(), labelId);
 }
 
 export async function deleteLabel(id: string): Promise<void> {
@@ -306,4 +389,22 @@ export async function getSettings(): Promise<AppSettings> {
 export async function saveSettings(settings: AppSettings): Promise<void> {
   const db = await getDb();
   await db.runAsync('INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)', 'app', JSON.stringify(settings));
+}
+
+// ---- Last connected printer (for auto-connect) --------------------------
+
+export async function getLastPrinter(): Promise<{ id: string; name: string } | null> {
+  const db = await getDb();
+  const row = await db.getFirstAsync<{ value: string }>('SELECT value FROM settings WHERE key = ?', 'last_printer');
+  if (!row) return null;
+  try {
+    return JSON.parse(row.value) as { id: string; name: string };
+  } catch {
+    return null;
+  }
+}
+
+export async function setLastPrinter(id: string, name: string): Promise<void> {
+  const db = await getDb();
+  await db.runAsync('INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)', 'last_printer', JSON.stringify({ id, name }));
 }

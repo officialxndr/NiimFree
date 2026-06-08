@@ -1,7 +1,7 @@
 // BLE scan + connect sheet. Lists discovered Niimbot printers and connects on tap.
 
 import React, { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, View } from 'react-native';
+import { ActivityIndicator, ScrollView, useWindowDimensions, View } from 'react-native';
 import { ScanResult } from '../../lib/ble/transport';
 import { usePrinter } from '../../store/printer';
 import { useToast } from '../../store/toast';
@@ -20,6 +20,7 @@ export function ConnectSheet({ visible, onClose }: { visible: boolean; onClose: 
   const [error, setError] = useState<string | null>(null);
   const [connectingId, setConnectingId] = useState<string | null>(null);
   const stopRef = useRef<(() => void) | null>(null);
+  const { height } = useWindowDimensions();
 
   useEffect(() => {
     if (!visible) return;
@@ -87,7 +88,12 @@ export function ConnectSheet({ visible, onClose }: { visible: boolean; onClose: 
         </Banner>
       )}
 
-      <View style={{ gap: 10, minHeight: 80 }}>
+      <ScrollView
+        style={{ minHeight: 80, maxHeight: height * 0.5 }}
+        contentContainerStyle={{ gap: 10, paddingBottom: 4 }}
+        showsVerticalScrollIndicator
+        keyboardShouldPersistTaps="handled"
+      >
         {devices.map((d) => (
           <View key={d.id}>
             <DeviceRow name={d.name} meta={d.id} rssi={d.rssi} onPress={() => onPick(d)} />
@@ -101,7 +107,7 @@ export function ConnectSheet({ visible, onClose }: { visible: boolean; onClose: 
             )}
           </View>
         ))}
-      </View>
+      </ScrollView>
     </BottomSheet>
   );
 }

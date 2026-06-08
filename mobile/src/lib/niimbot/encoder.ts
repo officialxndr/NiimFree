@@ -49,12 +49,6 @@ function thirdCounts(row: Uint8Array, width: number): [number, number, number] {
   return counts;
 }
 
-function rowsEqual(a: Uint8Array, b: Uint8Array): boolean {
-  if (a.length !== b.length) return false;
-  for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) return false;
-  return true;
-}
-
 function isEmpty(row: Uint8Array): boolean {
   for (let i = 0; i < row.length; i++) if (row[i] !== 0) return false;
   return true;
@@ -98,17 +92,13 @@ export function rotateBitmap(bmp: Bitmap, deg: 0 | 90 | 180 | 270): Bitmap {
 }
 
 export function encodeRows(bmp: Bitmap): NiimbotPacket[] {
+  // One packet per scan-line (repeat = 1). We deliberately do NOT merge identical
+  // consecutive lines via the `repeat` field: the B1/B21/B3S firmware does not reliably
+  // expand it, so merging makes a tall image collapse to a few lines and print blank.
   const packets: NiimbotPacket[] = [];
-  let y = 0;
-  while (y < bmp.height) {
+  for (let y = 0; y < bmp.height; y++) {
     const row = packRow(bmp, y);
-    // merge identical consecutive rows (capped at 255 repeats)
-    let repeat = 1;
-    while (y + repeat < bmp.height && repeat < 255 && rowsEqual(packRow(bmp, y + repeat), row)) {
-      repeat++;
-    }
-    packets.push(isEmpty(row) ? emptyRowPacket(y, repeat) : bitmapRowPacket(y, repeat, row, bmp.width));
-    y += repeat;
+    packets.push(isEmpty(row) ? emptyRowPacket(y, 1) : bitmapRowPacket(y, 1, row, bmp.width));
   }
   return packets;
 }

@@ -18,6 +18,7 @@ export enum Cmd {
   PrintBitmapRow = 0x85,
   PrintEmptyRow = 0x84,
   PrintStatus = 0xa3,
+  PrintStatusReply = 0xb3, // printer's reply to PrintStatus (carries printed-page count)
   PageEnd = 0xe3,
   PrintEnd = 0xf3,
   CancelPrint = 0xda,
